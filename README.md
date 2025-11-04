@@ -584,18 +584,6 @@ retrieved_docs = csv_vector_store.similarity_search(query, k=5)  # Change k valu
 - Use HTTPS in production
 - Implement authentication for user access
 
-## 📝 License
-
-[Add your license here]
-
-## 🤝 Contributing
-
-[Add contribution guidelines here]
-
-## 📧 Contact
-
-[Add contact information here]
-
 ## 🙏 Acknowledgments
 
 Built with:
