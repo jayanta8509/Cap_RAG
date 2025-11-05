@@ -217,7 +217,7 @@ async def chat_agent_endpoint(request: ChatRequest):
 # Run the application
 if __name__ == "__main__":
     # Get port from environment or default to 8000
-    port = int(os.getenv("PORT", 8000))
+    port = int(os.getenv("PORT", 8021))
     
     # Run with uvicorn
     uvicorn.run(
