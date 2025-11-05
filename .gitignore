@@ -8,3 +8,5 @@ store_datat_pinecon.py
 upload_pdfs_example_pinecone.py
 
 8021
+
+# nohup uvicorn app:app --host 0.0.0.0 --port 8021 --workers 4 > app.log 2>&1 &
