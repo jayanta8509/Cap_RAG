@@ -9,5 +9,6 @@ upload_pdfs_example_pinecone.py
 data
 test_json_txt_upload.py
 8021
+191.101.0.166
 /home/ragcapai/htdocs/ragcapai.bestworks.cloud
 # nohup uvicorn app:app --host 0.0.0.0 --port 8021 --workers 4 > app.log 2>&1 &
