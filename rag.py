@@ -1,14 +1,15 @@
 """
-Document RAG Chatbot - Function-based Implementation
-A flexible RAG implementation for document Q&A using Pinecone vector database
+CapAmerica Headwear Catalog Assistant - RAG Implementation
+AI-powered sales assistant for headwear product catalog using Pinecone vector database
 
 Features:
-- Function-based architecture instead of class
-- User-specific memory storage with MemorySaver
-- Specialized document retrieval and Q&A prompts
-- Safety features and crisis detection (optional)
-- Multi-step retrieval for comprehensive responses
-- Support for CSV and PDF document sources
+- Function-based architecture for flexibility
+- User-specific conversation memory with MemorySaver
+- Specialized headwear product recommendations and pricing
+- Product catalog search (JSON/TXT data)
+- Website content retrieval (CSV data)
+- Multi-step retrieval for complex product queries
+- Pricing calculations and customization guidance
 """
 
 import os
@@ -102,7 +103,7 @@ def create_retrieval_tools():
     
     @tool(response_format="content_and_artifact")
     def retrieve_csv_data(query: str):
-        """Retrieve structured data from CSV files including website content and datasets."""
+        """Retrieve website content and structured data about CapAmerica company, services, and general information."""
         if not csv_vector_store:
             return "CSV vector store not available", []
         
@@ -111,74 +112,104 @@ def create_retrieval_tools():
             serialized = "\n\n".join(
                 (f"Source: {doc.metadata.get('source', 'Unknown')}\n"
                  f"Type: {doc.metadata.get('category', 'Unknown')}\n"
-                 f"Data Source: CSV\n"
+                 f"Data Source: Website/CSV\n"
                  f"Content: {doc.page_content}")
                 for doc in retrieved_docs
             )
             return serialized, retrieved_docs
         except Exception as e:
-            return f"Error retrieving CSV data: {e}", []
+            return f"Error retrieving website data: {e}", []
     
     @tool(response_format="content_and_artifact")
-    def retrieve_pdf_data(query: str):
-        """Retrieve information from PDF documents including catalogs, guides, and reference materials."""
+    def retrieve_product_catalog(query: str):
+        """Retrieve headwear product catalog information including caps, pricing, features, colors, customization options, and decoration pricing."""
         if not pdf_vector_store:
-            return "PDF vector store not available", []
+            return "Product catalog not available", []
         
         try:
             retrieved_docs = pdf_vector_store.similarity_search(query, k=3)
             serialized = "\n\n".join(
                 (f"Source: {doc.metadata.get('source', 'Unknown')}\n"
                  f"Category: {doc.metadata.get('category', 'Unknown')}\n"
-                 f"Data Source: PDF\n"
+                 f"Product ID: {doc.metadata.get('product_id', 'N/A')}\n"
+                 f"Data Source: Product Catalog\n"
                  f"Content: {doc.page_content}")
                 for doc in retrieved_docs
             )
             return serialized, retrieved_docs
         except Exception as e:
-            return f"Error retrieving PDF data: {e}", []
+            return f"Error retrieving product catalog: {e}", []
     
-    tools = [retrieve_csv_data, retrieve_pdf_data]
+    tools = [retrieve_csv_data, retrieve_product_catalog]
     print("✅ Retrieval tools setup complete")
     return tools
 
-def get_mental_health_system_prompt() -> str:
-    """Get the specialized system prompt for document Q&A"""
-    return """You are a knowledgeable and helpful AI assistant specialized in providing accurate information from document repositories. Your role is to answer questions based on the retrieved documents while being clear, concise, and informative.
+def get_headwear_catalog_system_prompt() -> str:
+    """Get the specialized system prompt for headwear catalog assistant"""
+    return """You are a professional and knowledgeable sales assistant for CapAmerica, specializing in custom headwear and branded caps. Your role is to help customers find the perfect headwear products, provide accurate pricing information, and explain customization options.
 
 **CORE PRINCIPLES:**
-- Provide accurate, factual information based on the retrieved documents
-- Be clear and concise in your explanations
-- Cite or reference the source documents when providing information
-- Admit when information is not available in the retrieved documents
-- Maintain a professional and helpful tone
+- Provide accurate product information based on the catalog data
+- Help customers find products that match their needs (style, features, price, colors)
+- Explain pricing tiers, embroidery options, and customization clearly
+- Mention stock availability when relevant
+- Be friendly, professional, and solution-oriented
+
+**PRODUCT KNOWLEDGE:**
+You have access to our complete headwear catalog including:
+- **10+ Cap Styles**: Performance caps, trucker caps, snap backs, visors, foam truckers, 5-7 panel caps
+- **Key Features**: UV protection, moisture wicking, water-resistant options, various closures (snap back, hook & loop)
+- **Materials**: Polyester, poly/cotton blends, poly/spandex, mesh backs, foam
+- **Colors**: 20+ color options (Black, Navy, Gray, White, Red, Maroon, Royal, and more)
+- **Sizing**: OSFM (One Size Fits Most), XS, S, M, L, XL, XXL options
+
+**PRICING STRUCTURE:**
+- **Quantity Tiers**: 15, 24, 48, 96, 144, 576, 2500+ units
+- **Base Pricing**: Includes standard flat embroidery (up to 10,000 stitches)
+- **Price Range**: $9.00 - $27.00 per unit depending on style and quantity
+- **3D Embroidery**: Additional $3-5 per unit over flat embroidery
+
+**CUSTOMIZATION OPTIONS:**
+- **Embroidery Locations**: Front panel (included), side/back ($3.00), across back seam ($3.00)
+- **Patches**: Molded rubber ($6), leather ($4-5), woven ($5), embroidered ($4), sublimated ($4)
+- **Special Options**: Custom labels ($0.90), American flag patch ($5), poms ($1.40-5.00)
+- **Extra Stitches**: $0.80 per 1,000 stitches beyond base allowance
 
 **RESPONSE GUIDELINES:**
-1. **Use Retrieved Information**: Base your responses primarily on the retrieved document content
-2. **Be Accurate**: Don't make up information - stick to what's in the documents
-3. **Provide Context**: Explain concepts clearly and provide relevant background when needed
-4. **Reference Sources**: Mention which document or source the information comes from
-5. **Be Helpful**: If the documents don't contain the exact answer, provide the closest relevant information
-6. **Ask for Clarification**: If the query is unclear, ask clarifying questions
+1. **Product Recommendations**: Suggest products based on customer needs (features, budget, style)
+2. **Pricing Clarity**: Always specify quantity tiers and embroidery type when discussing prices
+3. **Feature Highlighting**: Emphasize relevant features (UV protection, moisture wicking, water-resistant, etc.)
+4. **Color Options**: Mention available colors and note any out-of-stock items
+5. **Comparison**: Help compare similar products when customers are deciding
+6. **Customization Guidance**: Explain decoration options clearly and calculate add-on costs
+7. **Stock Awareness**: Inform customers about stock status when available
 
-**WHEN DOCUMENTS ARE NOT RELEVANT:**
-- Clearly state that the retrieved documents don't contain information about the query
-- Offer to help with questions that might be covered in the available documents
-- Suggest rephrasing the question if appropriate
+**WHEN ANSWERING QUESTIONS:**
+- Start with the most relevant products/information
+- Use bullet points for product features and pricing tiers
+- Provide product IDs (e.g., i7041, i8502) for easy reference
+- Calculate total pricing when asked (base price + add-ons)
+- Suggest alternatives if exact request isn't available
 
 **CONVERSATION STYLE:**
-- Use clear, professional language
-- Structure responses logically with headings or bullet points when appropriate
-- Provide examples from the documents when helpful
-- Be concise but thorough
-- Maintain consistency across the conversation
+- Friendly and professional sales assistant tone
+- Use clear, jargon-free language
+- Ask clarifying questions about quantity, budget, or specific needs
+- Be enthusiastic about products while staying factual
+- Offer to provide more details or alternatives
 
-**DOCUMENT INFORMATION:**
-You have access to documents from two main sources:
-1. **CSV Data**: Structured data from website content and datasets
-2. **PDF Data**: Documents including catalogs, guides, and reference materials
+**DATA SOURCES:**
+1. **JSON Product Catalog**: Detailed product information with pricing, features, colors, and sizing
+2. **TXT Pricing Files**: Decoration options, patch pricing, and add-on costs
+3. **Marketing Content**: Free samples information and quality promises
 
-Remember: Your primary goal is to provide accurate, helpful information based on the available documents. Always prioritize accuracy over completeness."""
+**EXAMPLE INTERACTIONS:**
+- "Looking for affordable navy caps" → Suggest i8505 ($11.50-13.00) or i3057 ($12.00)
+- "Need UV protection for outdoor events" → Highlight i7041, i8530, i8540 with UV features
+- "What's the cost for leather patches?" → Explain genuine leather ($5) vs faux leather ($4) options
+- "Bulk order pricing for 200 units" → Use 144-tier pricing as reference point
+
+Remember: Your goal is to help customers find the right headwear products and understand all costs involved. Be consultative, accurate, and helpful. Always base recommendations on the actual catalog data."""
 
 # Crisis detection removed - not needed for generic document Q&A
 
@@ -219,13 +250,13 @@ def setup_conversational_chain(tools):
         if tool_messages:
             docs_content = "\n\n".join(doc.content for doc in tool_messages)
             context_prompt = f"""
-**RETRIEVED DOCUMENT INFORMATION:**
+**RETRIEVED CATALOG INFORMATION:**
 {docs_content}
 
-**Instructions:** Use this information to answer the user's question accurately. Base your response primarily on the retrieved content, and clearly indicate when information comes from the documents. If the documents don't fully answer the question, acknowledge this.
+**Instructions:** Use this product catalog information to help the customer. Provide specific product recommendations with IDs, pricing for their quantity needs, and relevant features. Calculate total costs when customization is discussed. If you have product information, be specific with names, IDs, and prices. If the catalog doesn't have exactly what they need, suggest the closest alternatives.
 """
         else:
-            context_prompt = "**No specific retrieved context available - provide a helpful response based on general knowledge, but be clear that this is not from the document repository.**"
+            context_prompt = "**No specific catalog data retrieved - Ask the customer for more details about what they're looking for (style, quantity, budget, features) so you can search the catalog more effectively.**"
         
         # Filter conversation messages (exclude tool calls)
         conversation_messages = []
@@ -243,7 +274,7 @@ def setup_conversational_chain(tools):
             # Skip tool messages completely
         
         # Create the prompt with system message
-        system_prompt = get_mental_health_system_prompt() + "\n\n" + context_prompt
+        system_prompt = get_headwear_catalog_system_prompt() + "\n\n" + context_prompt
         prompt = [SystemMessage(system_prompt)] + conversation_messages
         
         # Generate response
@@ -277,7 +308,7 @@ def setup_conversational_chain(tools):
     print("✅ Conversational RAG chain with user-specific memory setup complete")
 
 def setup_agent(tools):
-    """Setup ReAct agent for complex mental health queries"""
+    """Setup ReAct agent for complex product queries"""
     global agent_executor
     
     # Create agent with user-specific memory
@@ -286,13 +317,13 @@ def setup_agent(tools):
         tools, 
         checkpointer=memory_saver
     )
-    print("✅ Document RAG agent setup complete")
+    print("✅ Headwear Catalog agent setup complete")
 
 def initialize_rag_system(csv_index_name: str = "cap-website-data",
                          pdf_index_name: str = "cap-rag-index",
                          model_name: str = "gpt-4o-mini"):
     """Initialize the complete RAG system"""
-    print("🚀 Initializing Document RAG System...")
+    print("🚀 Initializing CapAmerica Headwear Catalog System...")
     
     # Initialize models
     initialize_models(model_name)
@@ -309,7 +340,7 @@ def initialize_rag_system(csv_index_name: str = "cap-website-data",
     # Setup agent
     setup_agent(tools)
     
-    print("✅ Document RAG System ready for questions!")
+    print("✅ CapAmerica Headwear Catalog System ready to help customers!")
 
 def get_user_config(user_id: str) -> Dict[str, Any]:
     """Get configuration for user-specific memory thread"""
@@ -441,12 +472,12 @@ def chat_interactive(message: str, user_id: str, use_agent: bool = False):
     """Interactive chat interface for console use"""
     config = get_user_config(user_id)
     
-    print(f"\n👤 User ({user_id}): {message}")
+    print(f"\n👤 Customer ({user_id}): {message}")
     print("=" * 60)
     
     # Choose between conversational chain or agent
     if use_agent:
-        print("🤖 Agent Mode: Multi-step retrieval")
+        print("🤖 Agent Mode: Detailed catalog search")
         for event in agent_executor.stream(
             {"messages": [{"role": "user", "content": message}]},
             stream_mode="values",
@@ -454,7 +485,7 @@ def chat_interactive(message: str, user_id: str, use_agent: bool = False):
         ):
             event["messages"][-1].pretty_print()
     else:
-        print("🤖 Counselor Mode: Empathetic response")
+        print("🤖 Sales Assistant Mode: Product recommendations")
         for step in conversational_graph.stream(
             {"messages": [{"role": "user", "content": message}]},
             stream_mode="values",
@@ -464,7 +495,7 @@ def chat_interactive(message: str, user_id: str, use_agent: bool = False):
 
 def get_conversation_summary(user_id: str) -> str:
     """Get a summary of the conversation for continuity"""
-    return f"Conversation thread: user_{user_id} - Document Q&A session"
+    return f"Conversation thread: user_{user_id} - Headwear catalog inquiry"
 
 def clear_conversation(user_id: str):
     """Clear conversation memory for a user"""
@@ -472,10 +503,10 @@ def clear_conversation(user_id: str):
     # The MemorySaver automatically handles user-specific threads
 
 def interactive_document_chat():
-    """Interactive document Q&A chat session"""
-    print("📚 Document RAG Chatbot")
+    """Interactive headwear catalog chat session"""
+    print("🧢 CapAmerica Headwear Catalog Assistant")
     print("=" * 50)
-    print("Welcome! I'm here to answer questions from your document repository.")
+    print("Welcome! I'm here to help you find the perfect headwear products.")
     print("Type 'quit' to exit, 'agent' to use agent mode, 'clear' to clear conversation.")
     print("=" * 50)
     
@@ -496,11 +527,11 @@ def interactive_document_chat():
             user_input = input(f"\n💬 You ({user_id}): ").strip()
             
             if user_input.lower() in ['quit', 'exit', 'q']:
-                print("\n👋 Thank you for using Document RAG Chatbot. Goodbye!")
+                print("\n👋 Thank you for exploring our catalog. Have a great day!")
                 break
             elif user_input.lower() == 'agent':
                 use_agent = not use_agent
-                mode = "Agent" if use_agent else "Counselor"
+                mode = "Agent" if use_agent else "Sales Assistant"
                 print(f"\n🔄 Switched to {mode} mode")
                 continue
             elif user_input.lower() == 'clear':
@@ -514,15 +545,15 @@ def interactive_document_chat():
             chat_interactive(user_input, user_id, use_agent)
             
         except KeyboardInterrupt:
-            print("\n\n👋 Thank you for using Document RAG Chatbot. Goodbye!")
+            print("\n\n👋 Thank you for exploring our catalog. Have a great day!")
             break
         except Exception as e:
             print(f"\n❌ An error occurred: {e}")
             print("Please try again or type 'quit' to exit.")
 
 def demo_document_scenarios():
-    """Demonstrate various document Q&A scenarios"""
-    print("📚 Document RAG Bot - Demo Scenarios")
+    """Demonstrate various headwear catalog scenarios"""
+    print("🧢 CapAmerica Catalog Assistant - Demo Scenarios")
     print("=" * 60)
     
     try:
@@ -534,22 +565,22 @@ def demo_document_scenarios():
     # Demo scenarios
     scenarios = [
         {
-            "title": "General Document Query",
-            "message": "What information is available in the documents?",
+            "title": "Product Discovery",
+            "message": "I need lightweight caps with UV protection for outdoor events. What do you have?",
             "use_agent": False,
-            "user_id": "demo_user_1"
+            "user_id": "demo_customer_1"
         },
         {
-            "title": "Detailed Search",
-            "message": "Can you provide detailed information about the contents of the PDF documents?",
+            "title": "Pricing Inquiry",
+            "message": "What's the cost for 100 navy blue trucker caps with embroidered patches?",
             "use_agent": True,
-            "user_id": "demo_user_2"
+            "user_id": "demo_customer_2"
         },
         {
-            "title": "Specific Information Request",
-            "message": "What are the main topics covered in the documents?",
+            "title": "Customization Options",
+            "message": "Tell me about the different patch and embroidery options you offer.",
             "use_agent": False,
-            "user_id": "demo_user_3"
+            "user_id": "demo_customer_3"
         }
     ]
     
@@ -570,7 +601,7 @@ def demo_document_scenarios():
 
 if __name__ == "__main__":
     # Choose demo or interactive mode
-    print("📚 Document RAG Chatbot")
+    print("🧢 CapAmerica Headwear Catalog Assistant")
     print("1. Interactive Chat")
     print("2. Demo Scenarios")
     
